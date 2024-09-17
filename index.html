@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Données du Marché d'Albion Online</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      margin: 20px 0;
+      color: #444;
+    }
+
+    .container {
+      width: 80%;
+      margin: 0 auto;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    select, input[type="checkbox"] {
+      margin-right: 10px;
+    }
+
+    .filters {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    .filters h2 {
+      margin-top: 0;
+    }
+
+    .filters div {
+      margin-bottom: 20px;
+    }
+
+    .filters label {
+      display: inline-block;
+      margin-right: 15px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #f2f2f2;
+      cursor: pointer;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+
+    img {
+      max-width: 150px;
+      border-radius: 4px;
+    }
+
+    .btn {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      margin: 10px 0;
+    }
+
+    .btn:hover {
+      background-color: #0056b3;
+    }
+
+    .count {
+      margin-bottom: 20px;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Données du Marché d'Albion Online</h1>
+    
+    <!-- Liste déroulante pour la sélection des objets -->
+    <label for="item-select">Sélectionner un objet :</label>
+    <select id="item-select" onchange="updateMarketData()"></select>
+
+    <!-- Filtres pour qualité et ville -->
+    <div class="filters">
+      <h2>Filtres</h2>
+      <div>
+        <h3>Qualité</h3>
+        <label><input type="checkbox" class="quality-filter" value="1" onchange="updateMarketData()"> Qualité 1</label>
+        <label><input type="checkbox" class="quality-filter" value="2" onchange="updateMarketData()"> Qualité 2</label>
+        <label><input type="checkbox" class="quality-filter" value="3" onchange="updateMarketData()"> Qualité 3</label>
+        <label><input type="checkbox" class="quality-filter" value="4" onchange="updateMarketData()"> Qualité 4</label>
+        <label><input type="checkbox" class="quality-filter" value="5" onchange="updateMarketData()"> Qualité 5</label>
+      </div>
+      <div>
+        <h3>Ville</h3>
+        <label><input type="checkbox" class="city-filter" value="Caerleon" onchange="updateMarketData()"> Caerleon</label>
+        <label><input type="checkbox" class="city-filter" value="Bridgewatch" onchange="updateMarketData()"> Bridgewatch</label>
+        <label><input type="checkbox" class="city-filter" value="Lymhurst" onchange="updateMarketData()"> Lymhurst</label>
+        <label><input type="checkbox" class="city-filter" value="Martlock" onchange="updateMarketData()"> Martlock</label>
+        <label><input type="checkbox" class="city-filter" value="Thetford" onchange="updateMarketData()"> Thetford</label>
+        <label><input type="checkbox" class="city-filter" value="Fort Sterling" onchange="updateMarketData()"> Fort Sterling</label>
+        <label><input type="checkbox" class="city-filter" value="Black Market" onchange="updateMarketData()"> Black Market</label>
+        <label><input type="checkbox" class="city-filter" value="Brecilien" onchange="updateMarketData()"> Brecilien</label>
+      </div>
+    </div>
+
+    <div class="count">
+      Nombre total d'objets : <span id="total-item-count">0</span> | Nombre d'objets chargés : <span id="item-count">0</span>
+    </div>
+
+    <table id="market-data-table">
+      <thead>
+        <tr>
+          <th onclick="sortTable(0)">ID de l'objet</th>
+          <th onclick="sortTable(1)">Qualité</th>
+          <th onclick="sortTable(2)">Ville</th>
+          <th>Prix de vente min</th>
+          <th>Prix de vente max</th>
+          <th>Prix d'achat min</th>
+          <th>Prix d'achat max</th>
+          <th>Image</th>
+        </tr>
+      </thead>
+      <tbody id="market-data"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'https://europe.albion-online-data.com/api/v2';
+    const RENDER_BASE_URL = 'https://render.albiononline.com/v1/item';
+    const JSON_DATA_URL = 'items.json'; // Remplace par le chemin vers ton fichier JSON
+
+    let totalItemCount = 0;
+
+    // Fonction pour charger les données des objets et peupler la liste déroulante
+    async function loadItems() {
+      try {
+        const response = await axios.get(JSON_DATA_URL);
+        const items = response.data;
+        totalItemCount = items.length;
+        document.getElementById('total-item-count').textContent = totalItemCount;
+
+        const select = document.getElementById('item-select');
+
+        // Clear existing options
+        select.innerHTML = '';
+
+        items.forEach(item => {
+          const option = document.createElement('option');
+          option.value = item.UniqueName;
+          option.textContent = item.LocalizedNames['FR-FR']; // Changez la langue selon le besoin
+          select.appendChild(option);
+        });
+
+        // Charger les données pour le premier objet par défaut
+        if (items.length > 0) {
+          updateMarketData();
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des données des objets :', error);
+      }
+    }
+
+    // Fonction pour récupérer et afficher les données du marché en fonction de l'objet sélectionné et des filtres
+    async function updateMarketData() {
+      const item = document.getElementById('item-select').value;
+      const data = await getMarketData(item);
+      
+      // Obtenir les filtres de qualité et de ville sélectionnés
+      const selectedQualities = Array.from(document.querySelectorAll('.quality-filter:checked')).map(cb => cb.value);
+      const selectedCities = Array.from(document.querySelectorAll('.city-filter:checked')).map(cb => cb.value);
+
+      const marketDataTable = document.getElementById('market-data');
+      marketDataTable.innerHTML = '';
+
+      const filteredData = data.filter(entry => {
+        const matchesQuality = selectedQualities.length === 0 || selectedQualities.includes(entry.quality.toString());
+        const matchesCity = selectedCities.length === 0 || selectedCities.includes(entry.city);
+        return matchesQuality && matchesCity;
+      });
+
+      // Mettre à jour le compteur d'objets chargés
+      document.getElementById('item-count').textContent = filteredData.length;
+
+      filteredData.forEach(item => {
+        const row = document.createElement('tr');
+        const imgSrc = `${RENDER_BASE_URL}/${item.item_id}.png`;
+        row.innerHTML = `
+          <td>${item.item_id}</td>
+          <td>${item.quality}</td>
+          <td>${item.city}</td>
+          <td>${item.sell_price_min}</td>
+          <td>${item.sell_price_max}</td>
+          <td>${item.buy_price_min}</td>
+          <td>${item.buy_price_max}</td>
+          <td><img src="${imgSrc}" alt="${item.item_id}"></td>
+        `;
+        marketDataTable.appendChild(row);
+      });
+    }
+
+    // Fonction pour récupérer les données du marché depuis l'API
+    async function getMarketData(item) {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/stats/prices/${item}`);
+        return response.data;
+      } catch (error) {
+        console.error('Erreur lors de la récupération des données du marché :', error);
+      }
+    }
+
+    // Fonction pour trier le tableau
+    function sortTable(columnIndex) {
+      const table = document.getElementById("market-data-table");
+      let rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+      switching = true;
+      dir = "asc";
+      
+      while (switching) {
+        switching = false;
+        rows = table.rows;
+        
+        for (i = 1; i < (rows.length - 1); i++) {
+          shouldSwitch = false;
+          x = rows[i].getElementsByTagName("TD")[columnIndex];
+          y = rows[i + 1].getElementsByTagName("TD")[columnIndex];
+          
+          if (dir == "asc") {
+            if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+              shouldSwitch = true;
+              break;
+            }
+          } else if (dir == "desc") {
+            if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+              shouldSwitch = true;
+              break;
+            }
+          }
+        }
+        if (shouldSwitch) {
+          rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+          switching = true;
+          switchcount++;
+        } else {
+          if (switchcount == 0 && dir == "asc") {
+            dir = "desc";
+            switching = true;
+          }
+        }
+      }
+    }
+
+    // Chargement initial des données des objets
+    loadItems();
+  </script>
+</body>
+</html>
