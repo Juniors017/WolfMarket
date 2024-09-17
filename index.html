@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Données du Marché d'Albion Online</title>
+  <title>Albion Online Market Data</title>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <style>
     body {
@@ -84,7 +84,7 @@
     }
 
     img {
-      max-width: 150px;
+      max-width: 50px;
       border-radius: 4px;
     }
 
@@ -104,34 +104,34 @@
     .btn:hover {
       background-color: #0056b3;
     }
-
-    .count {
-      margin-bottom: 20px;
-      font-size: 1.2em;
-    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Données du Marché d'Albion Online</h1>
+    <h1>Albion Online Market Data</h1>
     
-    <!-- Liste déroulante pour la sélection des objets -->
-    <label for="item-select">Sélectionner un objet :</label>
+    <!-- Dropdown for item selection -->
+    <label for="item-select">Select an item:</label>
     <select id="item-select" onchange="updateMarketData()"></select>
 
-    <!-- Filtres pour qualité et ville -->
+    <!-- Number of items loaded -->
+    <div class="count">
+      Number of items loaded: <span id="item-count">0</span>
+    </div>
+
+    <!-- Filters for quality and city -->
     <div class="filters">
-      <h2>Filtres</h2>
+      <h2>Filters</h2>
       <div>
-        <h3>Qualité</h3>
-        <label><input type="checkbox" class="quality-filter" value="1" onchange="updateMarketData()"> Qualité 1</label>
-        <label><input type="checkbox" class="quality-filter" value="2" onchange="updateMarketData()"> Qualité 2</label>
-        <label><input type="checkbox" class="quality-filter" value="3" onchange="updateMarketData()"> Qualité 3</label>
-        <label><input type="checkbox" class="quality-filter" value="4" onchange="updateMarketData()"> Qualité 4</label>
-        <label><input type="checkbox" class="quality-filter" value="5" onchange="updateMarketData()"> Qualité 5</label>
+        <h3>Quality</h3>
+        <label><input type="checkbox" class="quality-filter" value="1" onchange="updateMarketData()"> Quality 1</label>
+        <label><input type="checkbox" class="quality-filter" value="2" onchange="updateMarketData()"> Quality 2</label>
+        <label><input type="checkbox" class="quality-filter" value="3" onchange="updateMarketData()"> Quality 3</label>
+        <label><input type="checkbox" class="quality-filter" value="4" onchange="updateMarketData()"> Quality 4</label>
+        <label><input type="checkbox" class="quality-filter" value="5" onchange="updateMarketData()"> Quality 5</label>
       </div>
       <div>
-        <h3>Ville</h3>
+        <h3>City</h3>
         <label><input type="checkbox" class="city-filter" value="Caerleon" onchange="updateMarketData()"> Caerleon</label>
         <label><input type="checkbox" class="city-filter" value="Bridgewatch" onchange="updateMarketData()"> Bridgewatch</label>
         <label><input type="checkbox" class="city-filter" value="Lymhurst" onchange="updateMarketData()"> Lymhurst</label>
@@ -143,20 +143,16 @@
       </div>
     </div>
 
-    <div class="count">
-      Nombre total d'objets : <span id="total-item-count">0</span> | Nombre d'objets chargés : <span id="item-count">0</span>
-    </div>
-
     <table id="market-data-table">
       <thead>
         <tr>
-          <th onclick="sortTable(0)">ID de l'objet</th>
-          <th onclick="sortTable(1)">Qualité</th>
-          <th onclick="sortTable(2)">Ville</th>
-          <th>Prix de vente min</th>
-          <th>Prix de vente max</th>
-          <th>Prix d'achat min</th>
-          <th>Prix d'achat max</th>
+          <th onclick="sortTable(0)">Item ID</th>
+          <th onclick="sortTable(1)">Quality</th>
+          <th onclick="sortTable(2)">City</th>
+          <th>Sell Price Min</th>
+          <th>Sell Price Max</th>
+          <th>Buy Price Min</th>
+          <th>Buy Price Max</th>
           <th>Image</th>
         </tr>
       </thead>
@@ -165,24 +161,20 @@
   </div>
 
   <script>
-    const API_BASE_URL = 'https://europe.albion-online-data.com/api/v2';
+    const API_BASE_URL = 'https://www.albion-online-data.com/api/v2';
     const RENDER_BASE_URL = 'https://render.albiononline.com/v1/item';
-    const JSON_DATA_URL = 'items.json'; // Remplace par le chemin vers ton fichier JSON
+    const JSON_DATA_URL = '/items.json'; // Remplace par le chemin vers ton fichier JSON
 
-    let totalItemCount = 0;
-
-    // Fonction pour charger les données des objets et peupler la liste déroulante
+    // Function to fetch item data and populate dropdown
     async function loadItems() {
       try {
         const response = await axios.get(JSON_DATA_URL);
         const items = response.data;
-        totalItemCount = items.length;
-        document.getElementById('total-item-count').textContent = totalItemCount;
-
         const select = document.getElementById('item-select');
+        const itemCount = document.getElementById('item-count');
 
-        // Clear existing options
-        select.innerHTML = '';
+        // Update the count of loaded items
+        itemCount.textContent = items.length;
 
         items.forEach(item => {
           const option = document.createElement('option');
@@ -191,21 +183,21 @@
           select.appendChild(option);
         });
 
-        // Charger les données pour le premier objet par défaut
+        // Load data for the first item by default
         if (items.length > 0) {
           updateMarketData();
         }
       } catch (error) {
-        console.error('Erreur lors du chargement des données des objets :', error);
+        console.error('Error loading item data:', error);
       }
     }
 
-    // Fonction pour récupérer et afficher les données du marché en fonction de l'objet sélectionné et des filtres
+    // Function to fetch and display market data based on selected item and filters
     async function updateMarketData() {
       const item = document.getElementById('item-select').value;
       const data = await getMarketData(item);
       
-      // Obtenir les filtres de qualité et de ville sélectionnés
+      // Get selected quality and city filters
       const selectedQualities = Array.from(document.querySelectorAll('.quality-filter:checked')).map(cb => cb.value);
       const selectedCities = Array.from(document.querySelectorAll('.city-filter:checked')).map(cb => cb.value);
 
@@ -218,12 +210,9 @@
         return matchesQuality && matchesCity;
       });
 
-      // Mettre à jour le compteur d'objets chargés
-      document.getElementById('item-count').textContent = filteredData.length;
-
       filteredData.forEach(item => {
         const row = document.createElement('tr');
-        const imgSrc = `${RENDER_BASE_URL}/${item.item_id}.png`;
+        const imgSrc = `${RENDER_BASE_URL}/${item.item_id}.png?quality=${item.quality}`;
         row.innerHTML = `
           <td>${item.item_id}</td>
           <td>${item.quality}</td>
@@ -232,23 +221,23 @@
           <td>${item.sell_price_max}</td>
           <td>${item.buy_price_min}</td>
           <td>${item.buy_price_max}</td>
-          <td><img src="${imgSrc}" alt="${item.item_id}"></td>
+          <td><img src="${imgSrc}" alt="${item.item_id}" width="50"></td>
         `;
         marketDataTable.appendChild(row);
       });
     }
 
-    // Fonction pour récupérer les données du marché depuis l'API
+    // Function to fetch market data from API
     async function getMarketData(item) {
       try {
         const response = await axios.get(`${API_BASE_URL}/stats/prices/${item}`);
         return response.data;
       } catch (error) {
-        console.error('Erreur lors de la récupération des données du marché :', error);
+        console.error('Error fetching market data:', error);
       }
     }
 
-    // Fonction pour trier le tableau
+    // Function to sort table
     function sortTable(columnIndex) {
       const table = document.getElementById("market-data-table");
       let rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
@@ -289,7 +278,7 @@
       }
     }
 
-    // Chargement initial des données des objets
+    // Initial load of item data
     loadItems();
   </script>
 </body>
