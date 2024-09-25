@@ -110,12 +110,12 @@
     <h1>Données du marché Albion Online EUROPE</h1>
     
     <!-- Dropdown pour la sélection des items -->
-    <label for="item-select">Sélectionnez un item :</label>
+    <label for="item-select">Sélectionnez un objet :</label>
     <select id="item-select" onchange="updateMarketData()"></select>
 
     <!-- Nombre d'items chargés -->
     <div class="count">
-      Nombre d'items chargés : <span id="item-count">0</span>
+      Nombre d'objets chargés : <span id="item-count">0</span>
     </div>
 
     <!-- Filtres pour la qualité et la ville -->
@@ -123,11 +123,11 @@
       <h2>Filtres</h2>
       <div>
         <h3>Qualité</h3>
-        <label><input type="checkbox" class="quality-filter" value="1" onchange="updateMarketData()"> Qualité 1</label>
-        <label><input type="checkbox" class="quality-filter" value="2" onchange="updateMarketData()"> Qualité 2</label>
-        <label><input type="checkbox" class="quality-filter" value="3" onchange="updateMarketData()"> Qualité 3</label>
-        <label><input type="checkbox" class="quality-filter" value="4" onchange="updateMarketData()"> Qualité 4</label>
-        <label><input type="checkbox" class="quality-filter" value="5" onchange="updateMarketData()"> Qualité 5</label>
+        <label><input type="checkbox" class="quality-filter" value="1" onchange="updateMarketData()">normal</label>
+        <label><input type="checkbox" class="quality-filter" value="2" onchange="updateMarketData()">Bon</label>
+        <label><input type="checkbox" class="quality-filter" value="3" onchange="updateMarketData()">Exceptionnel</label>
+        <label><input type="checkbox" class="quality-filter" value="4" onchange="updateMarketData()">Excellent</label>
+        <label><input type="checkbox" class="quality-filter" value="5" onchange="updateMarketData()">Chef-d'oeuvre</label>
       </div>
       <div>
         <h3>Ville</h3>
@@ -145,7 +145,7 @@
     <table id="market-data-table">
       <thead>
         <tr>
-          <th>ID</th>
+          
           <th>Qualité</th>
           <th>Ville</th>
           <th>Prix de Vente Min</th>
@@ -162,7 +162,7 @@
   <script>
     const API_BASE_URL = 'https://europe.albion-online-data.com/api/v2/';
     const RENDER_BASE_URL = 'https://render.albiononline.com/v1/item';
-    const JSON_DATA_URL = '/items.json'; // Remplace par le chemin vers ton fichier JSON
+    const JSON_DATA_URL = 'items.json'; // Remplace par le chemin vers ton fichier JSON
 
     async function loadItems() {
       try {
@@ -173,12 +173,19 @@
 
         itemCount.textContent = items.length;
 
-        items.forEach(item => {
-          const option = document.createElement('option');
-          option.value = item.UniqueName;
-          option.textContent = item.LocalizedNames['FR-FR'];
-          select.appendChild(option);
-        });
+       items.forEach(item => {
+  const option = document.createElement('option');
+  option.value = item.UniqueName;
+  
+  // Check if LocalizedNames exists and has 'FR-FR'
+  if (item.LocalizedNames && item.LocalizedNames['FR-FR']) {
+    option.textContent = item.LocalizedNames['FR-FR'];
+  } else {
+    option.textContent = 'Unknown'; // Default or fallback text
+  }
+  
+  select.appendChild(option);
+});
 
         if (items.length > 0) {
           updateMarketData();
@@ -214,7 +221,7 @@
         const buyPriceMax = entry.buy_price_max ? `${entry.buy_price_max} <br><small>${formatDate(entry.buy_price_max_date)}</small>` : '-';
 
         row.innerHTML = `
-          <td>${entry.item_id}</td>
+          
           <td>${entry.quality}</td>
           <td>${entry.city}</td>
           <td>${sellPriceMin}</td>
