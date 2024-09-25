@@ -103,15 +103,37 @@
     .btn:hover {
       background-color: #8E6744;
     }
+
+    /* Styles pour la liste des items */
+    ul#item-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    ul#item-list li {
+      background-color: #3D3D3D;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    ul#item-list li:hover {
+      background-color: #555;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Données du marché Albion Online EUROPE</h1>
-    
-    <!-- Dropdown pour la sélection des items -->
-    <label for="item-select">Sélectionnez un objet :</label>
-    <select id="item-select" onchange="updateMarketData()"></select>
+
+    <!-- Champ de recherche pour filtrer les objets -->
+    <label for="search-item">Rechercher un objet :</label>
+    <input type="text" id="search-item" placeholder="Tapez pour rechercher..." oninput="filterItems()">
+    <br><br>
+
+    <!-- Liste des objets filtrés, masquée par défaut -->
+    <ul id="item-list" style="display: none;"></ul>
 
     <!-- Nombre d'items chargés -->
     <div class="count">
@@ -145,7 +167,6 @@
     <table id="market-data-table">
       <thead>
         <tr>
-          
           <th>Qualité</th>
           <th>Ville</th>
           <th>Prix de Vente Min</th>
@@ -164,40 +185,76 @@
     const RENDER_BASE_URL = 'https://render.albiononline.com/v1/item';
     const JSON_DATA_URL = 'items.json'; // Remplace par le chemin vers ton fichier JSON
 
+    // Chargement des objets depuis le fichier JSON
     async function loadItems() {
       try {
         const response = await axios.get(JSON_DATA_URL);
         const items = response.data;
-        const select = document.getElementById('item-select');
+        const itemList = document.getElementById('item-list');
         const itemCount = document.getElementById('item-count');
 
         itemCount.textContent = items.length;
 
-       items.forEach(item => {
-  const option = document.createElement('option');
-  option.value = item.UniqueName;
-  
-  // Check if LocalizedNames exists and has 'FR-FR'
-  if (item.LocalizedNames && item.LocalizedNames['FR-FR']) {
-    option.textContent = item.LocalizedNames['FR-FR'];
-  } else {
-    option.textContent = 'Unknown'; // Default or fallback text
-  }
-  
-  select.appendChild(option);
-});
+        // Supprimer les éléments précédents (au cas où la fonction est appelée plusieurs fois)
+        itemList.innerHTML = '';
 
-        if (items.length > 0) {
-          updateMarketData();
-        }
+        // Générer les éléments de la liste
+        items.forEach(item => {
+          const li = document.createElement('li');
+          li.dataset.uniqueName = item.UniqueName;
+          li.dataset.localizedName = item.LocalizedNames && item.LocalizedNames['FR-FR'] ? item.LocalizedNames['FR-FR'] : 'Unknown';
+          li.textContent = li.dataset.localizedName;
+          li.style.cursor = 'pointer';
+          
+          // Ajouter un événement pour mettre à jour les données du marché au clic
+          li.addEventListener('click', () => {
+            // Masquer tous les autres items sauf celui sélectionné
+            Array.from(itemList.getElementsByTagName('li')).forEach(listItem => {
+              if (listItem !== li) {
+                listItem.style.display = 'none'; // Masquer tous les autres
+              }
+            });
+            li.style.display = 'block'; // Assurer que l'élément cliqué reste visible
+
+            // Appeler la fonction pour mettre à jour les données du marché
+            updateMarketData(item.UniqueName);
+          });
+
+          itemList.appendChild(li);
+        });
       } catch (error) {
         console.error('Erreur lors du chargement des données des items :', error);
       }
     }
 
-    async function updateMarketData() {
-      const item = document.getElementById('item-select').value;
-      const data = await getMarketData(item);
+    // Filtrage des éléments en fonction de la recherche
+    function filterItems() {
+      const searchValue = document.getElementById('search-item').value.toLowerCase();
+      const itemList = document.getElementById('item-list');
+      const items = itemList.getElementsByTagName('li');
+
+      if (searchValue === '') {
+        // Masquer la liste si le champ est vide
+        itemList.style.display = 'none';
+      } else {
+        // Afficher la liste si quelque chose est tapé
+        itemList.style.display = 'block';
+        
+        // Filtrer les éléments de la liste
+        Array.from(items).forEach(item => {
+          const itemText = item.textContent.toLowerCase();
+          if (itemText.includes(searchValue)) {
+            item.style.display = 'block'; // Afficher l'élément si le texte correspond
+          } else {
+            item.style.display = 'none'; // Masquer l'élément si le texte ne correspond pas
+          }
+        });
+      }
+    }
+
+    // Mise à jour des données du marché en fonction de l'élément sélectionné
+    async function updateMarketData(itemUniqueName) {
+      const data = await getMarketData(itemUniqueName);
 
       const selectedQualities = Array.from(document.querySelectorAll('.quality-filter:checked')).map(cb => cb.value);
       const selectedCities = Array.from(document.querySelectorAll('.city-filter:checked')).map(cb => cb.value);
@@ -221,7 +278,6 @@
         const buyPriceMax = entry.buy_price_max ? `${entry.buy_price_max} <br><small>${formatDate(entry.buy_price_max_date)}</small>` : '-';
 
         row.innerHTML = `
-          
           <td>${entry.quality}</td>
           <td>${entry.city}</td>
           <td>${sellPriceMin}</td>
@@ -234,17 +290,20 @@
       });
     }
 
+    // Récupérer les données du marché pour un objet spécifique
     async function getMarketData(item) {
       const url = `${API_BASE_URL}stats/prices/${item}.json`;
       const response = await axios.get(url);
       return response.data;
     }
 
+    // Formater la date
     function formatDate(dateString) {
       if (!dateString) return '';
       return dateString.split('T')[0];
     }
 
+    // Charger les objets dès le chargement de la page
     loadItems();
   </script>
 </body>
